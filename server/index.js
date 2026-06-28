@@ -26,13 +26,31 @@ app.get('/api/health', (req, res) => {
 });
 
 // Database Connection
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => {
+const { MongoMemoryServer } = require('mongodb-memory-server');
+
+async function connectDB() {
+  try {
+    await mongoose.connect(process.env.MONGO_URI);
     console.log('✅ Connected to MongoDB');
-    app.listen(PORT, () => {
-      console.log(`🚀 Server running on port ${PORT}`);
-    });
-  })
-  .catch((err) => {
-    console.error('❌ Failed to connect to MongoDB', err);
+    startServer();
+  } catch (err) {
+    console.log('⚠️ Failed to connect to local MongoDB. Starting Demo In-Memory Database instead...');
+    try {
+      const mongoServer = await MongoMemoryServer.create();
+      const mongoUri = mongoServer.getUri();
+      await mongoose.connect(mongoUri);
+      console.log('✅ Connected to Demo In-Memory MongoDB');
+      startServer();
+    } catch (memErr) {
+      console.error('❌ Failed to start Demo Database', memErr);
+    }
+  }
+}
+
+function startServer() {
+  app.listen(PORT, () => {
+    console.log(`🚀 Server running on port ${PORT}`);
   });
+}
+
+connectDB();
