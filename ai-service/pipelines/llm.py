@@ -4,7 +4,7 @@ import json
 
 def call_llm(messages, response_format=None):
     api_key = os.getenv("LLM_API_KEY", "mock_key")
-    model = os.getenv("LLM_MODEL", "gpt-4o-mini")
+    model = os.getenv("LLM_MODEL", "mistral-small-latest")
     
     if api_key == "mock_key":
         # Return mock responses if no key provided
@@ -12,10 +12,11 @@ def call_llm(messages, response_format=None):
             return '{"flashcards": [{"question": "Mock Q", "answer": "Mock A"}]}'
         return "Mock LLM Response. Please provide a real LLM_API_KEY."
 
-    url = "https://api.openai.com/v1/chat/completions"
+    url = "https://api.mistral.ai/v1/chat/completions"
     headers = {
         "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        "Accept": "application/json"
     }
     payload = {
         "model": model,
