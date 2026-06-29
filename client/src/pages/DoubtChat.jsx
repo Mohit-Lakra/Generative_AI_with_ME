@@ -1,20 +1,33 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { doubts } from '../api/client';
-import { Send } from 'lucide-react';
+import { doubts, notes } from '../api/client';
+import { Send, Filter } from 'lucide-react';
 
 const DoubtChat = () => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [topics, setTopics] = useState([]);
+  const [selectedTopic, setSelectedTopic] = useState('');
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
     loadHistory();
+    loadTopics();
   }, []);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  const loadTopics = async () => {
+    try {
+      const allNotes = await notes.getAll();
+      const uniqueTopics = [...new Set(allNotes.map(n => n.topicLabel).filter(Boolean))];
+      setTopics(uniqueTopics);
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const loadHistory = async () => {
     try {
@@ -39,7 +52,7 @@ const DoubtChat = () => {
     setLoading(true);
 
     try {
-      const res = await doubts.ask(question);
+      const res = await doubts.ask(question, selectedTopic);
       setMessages(prev => [...prev, { 
         type: 'ai', 
         text: res.answer, 
@@ -55,8 +68,26 @@ const DoubtChat = () => {
 
   return (
     <div className="main-content animate-fade-in">
-      <h2>Doubt Solver</h2>
-      <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>Ask questions. Get answers grounded strictly in your own notes.</p>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
+        <div>
+          <h2>Doubt Solver</h2>
+          <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>Ask questions. Get answers grounded strictly in your own notes.</p>
+        </div>
+        
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(255,255,255,0.05)', padding: '0.5rem 1rem', borderRadius: '8px' }}>
+          <Filter size={16} color="var(--text-secondary)" />
+          <select 
+            value={selectedTopic} 
+            onChange={(e) => setSelectedTopic(e.target.value)}
+            style={{ background: 'transparent', border: 'none', color: 'var(--text-primary)', outline: 'none', cursor: 'pointer' }}
+          >
+            <option value="" style={{ color: '#000' }}>All Topics</option>
+            {topics.map(t => (
+              <option key={t} value={t} style={{ color: '#000' }}>{t}</option>
+            ))}
+          </select>
+        </div>
+      </div>
       
       <div className="chat-container">
         <div className="chat-messages">
@@ -65,7 +96,7 @@ const DoubtChat = () => {
               <p>{msg.text}</p>
               {msg.citations && msg.citations.length > 0 && (
                 <div style={{ marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
-                  <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Sources:</p>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Citations:</p>
                   {msg.citations.map((c, i) => (
                     <div key={i} style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.25rem', paddingLeft: '0.5rem', borderLeft: '2px solid var(--accent-primary)' }}>
                       [{i+1}] {c.snippet}

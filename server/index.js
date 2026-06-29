@@ -8,12 +8,22 @@ const notesRoutes = require('./routes/notes');
 const doubtsRoutes = require('./routes/doubts');
 const flashcardsRoutes = require('./routes/flashcards');
 
+const rateLimit = require('express-rate-limit');
+
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+// Rate limiter: max 100 requests per 15 minutes
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  message: { error: 'Too many requests from this IP, please try again later.' }
+});
 
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use('/api/', limiter);
 
 // Routes
 app.use('/api/auth', authRoutes);

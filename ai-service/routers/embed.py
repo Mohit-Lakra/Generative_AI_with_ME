@@ -1,19 +1,42 @@
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from typing import List
-from ..pipelines.ocr import process_image_base64
-from ..pipelines.embeddings import chunk_text, embed_texts
-from ..pipelines.clustering import cluster_and_label
-from ..store.faiss_index import vector_store
+from pipelines.ocr import process_image_base64
+from pipelines.embeddings import chunk_text, embed_texts
+from pipelines.clustering import cluster_and_label
+from store.faiss_index import vector_store
 
 router = APIRouter()
 
-class OcrRequest(BaseModel):
-    image_base64: str
+from pipelines.document_parser import parse_pdf, parse_docx
 
-class OcrResponse(BaseModel):
+class ParseRequest(BaseModel):
+    file_base64: str
+    mimetype: str
+
+class ParseResponse(BaseModel):
     raw_text: str
     confidence: float
+
+@router.post("/parse", response_model=ParseResponse)
+def parse_endpoint(req: ParseRequest):
+    try:
+        text = ""
+        conf = 100.0
+        if req.mimetype == "application/pdf":
+            text = parse_pdf(req.file_base64)
+        elif req.mimetype == "application/vnd.openxmlformats-officedocument.wordprocessingml.document" or req.mimetype == "application/msword":
+            text = parse_docx(req.file_base64)
+        elif req.mimetype.startswith("image/"):
+            res = process_image_base64(req.file_base64)
+            text = res["raw_text"]
+            conf = res["confidence"]
+        else:
+            raise HTTPException(status_code=400, detail="Unsupported mimetype")
+            
+        return ParseResponse(raw_text=text, confidence=conf)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 class EmbedRequest(BaseModel):
     note_id: str
@@ -30,14 +53,6 @@ class EmbedResponse(BaseModel):
     topic_label: str
     topic_id: str
 
-@router.post("/ocr", response_model=OcrResponse)
-def ocr_endpoint(req: OcrRequest):
-    try:
-        res = process_image_base64(req.image_base64)
-        return res
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
 @router.post("/embed", response_model=EmbedResponse)
 def embed_endpoint(req: EmbedRequest):
     try:
@@ -46,7 +61,7 @@ def embed_endpoint(req: EmbedRequest):
             raise HTTPException(status_code=400, detail="Text too short to chunk")
             
         vectors = embed_texts(chunks)
-        vector_ids = vector_store.add_vectors(vectors, req.user_id)
+        vector_ids = vector_store.add_vectors(vectors, req.user_id, chunks, req.note_id)
         
         # Simple topic labeling based on clustering just these chunks for now
         # Spec says re-cluster "that user's chunks", but for MVP we cluster the new note's chunks

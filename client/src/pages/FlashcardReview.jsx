@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { flashcards } from '../api/client';
+import { toast } from 'react-hot-toast';
 import { BrainCircuit } from 'lucide-react';
 
 const FlashcardReview = () => {
@@ -40,11 +41,12 @@ const FlashcardReview = () => {
           // All done
           setCards([]);
           setCurrentIndex(0);
+          toast.success("All caught up for now!");
         }
       }, 300);
       
     } catch (err) {
-      alert("Error saving review");
+      toast.error("Error saving review: " + err.message);
     }
   };
 

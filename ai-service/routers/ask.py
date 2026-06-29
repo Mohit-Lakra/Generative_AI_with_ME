@@ -1,16 +1,17 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import List
-from ..pipelines.rag import ask_question
-from ..pipelines.embeddings import embed_texts
-from ..pipelines.flashcards import generate_flashcards as gen_flashcards
-from ..store.faiss_index import vector_store
+from pipelines.rag import ask_question
+from pipelines.embeddings import embed_texts
+from pipelines.flashcards import generate_flashcards as gen_flashcards
+from store.faiss_index import vector_store
 
 router = APIRouter()
 
 class AskRequest(BaseModel):
     user_id: str
     question: str
+    note_ids: List[str] = []
 
 class Citation(BaseModel):
     note_id: str
@@ -38,7 +39,7 @@ class FlashcardGenResponse(BaseModel):
 def ask_endpoint(req: AskRequest):
     try:
         q_vec = embed_texts([req.question])[0]
-        results = vector_store.search(q_vec, req.user_id, k=5, threshold=0.4)
+        results = vector_store.search(q_vec, req.user_id, req.note_ids, k=5, threshold=0.4)
         
         if not results:
             return AskResponse(
@@ -47,20 +48,20 @@ def ask_endpoint(req: AskRequest):
                 grounded=False
             )
             
-        # In a real app we'd fetch the chunk text from MongoDB or a local DB.
-        # For this prototype, we'd need the text. Since FAISS only stores vectors,
-        # we would typically pass chunk IDs back to Node, or maintain a local text store.
-        # As per spec, Python is stateless. This means Node should pass the chunks it wants to ask about,
-        # or Python needs a local DB.
-        # Wait, the spec says "FAISS ... internal microservice. Owns RAG pipeline".
-        # This implies Python queries FAISS. But FAISS doesn't store text. 
-        # I'll add a simple SQLite or JSON text store in the FAISS wrapper to store texts temporarily.
-        # But for now, returning mock citations and answer since LLM is mock by default anyway.
+        retrieved_chunks = []
+        for r in results:
+            retrieved_chunks.append({
+                "note_id": r.get("note_id"),
+                "chunk_id": str(r.get("vector_id")),
+                "text": r.get("text", "")
+            })
+            
+        ans, cits, grounded = ask_question(req.question, retrieved_chunks)
         
         return AskResponse(
-            answer="Here is an answer based on your notes.",
-            citations=[Citation(note_id="n1", chunk_id="c1", snippet="Mock snippet")],
-            grounded=True
+            answer=ans,
+            citations=[Citation(**c) for c in cits],
+            grounded=grounded
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

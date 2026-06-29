@@ -53,12 +53,12 @@ router.post('/', auth, upload.single('file'), async (req, res) => {
     let rawText = note.rawText;
     let confidence = null;
 
-    if (note.sourceType === 'image' && req.file) {
+    if (req.file) {
       try {
-        const base64Image = req.file.buffer.toString('base64');
-        const ocrRes = await aiClient.ocr(base64Image);
-        rawText = ocrRes.raw_text;
-        confidence = ocrRes.confidence;
+        const base64File = req.file.buffer.toString('base64');
+        const parseRes = await aiClient.parse(base64File, req.file.mimetype);
+        rawText = parseRes.raw_text;
+        confidence = parseRes.confidence;
 
         if (confidence < 60) {
           note.status = 'failed';

@@ -57,14 +57,22 @@ export const notes = {
   uploadText: (title, text) => fetchWithAuth('/notes', {
     method: 'POST',
     body: JSON.stringify({ title, text, sourceType: 'typed' })
-  })
-  // For file uploads, we use FormData in the component
+  }),
+  uploadFile: (title, file) => {
+    const formData = new FormData();
+    formData.append('title', title);
+    formData.append('file', file);
+    return fetchWithAuth('/notes', {
+      method: 'POST',
+      body: formData
+    });
+  }
 };
 
 export const doubts = {
-  ask: (question) => fetchWithAuth('/doubts', {
+  ask: (question, topic) => fetchWithAuth('/doubts', {
     method: 'POST',
-    body: JSON.stringify({ question })
+    body: JSON.stringify({ question, topic })
   }),
   getHistory: () => fetchWithAuth('/doubts')
 };

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Toaster, toast } from 'react-hot-toast';
 import Navbar from './components/Navbar';
 import Dashboard from './pages/Dashboard';
 import Upload from './pages/Upload';
@@ -22,12 +23,14 @@ const AuthScreen = ({ onLogin }) => {
       let res;
       if (isLogin) {
         res = await auth.login(email, password);
+        toast.success("Welcome back!");
       } else {
         res = await auth.signup(name, email, password);
+        toast.success("Account created successfully!");
       }
       onLogin(res.token);
     } catch (err) {
-      alert(err.message);
+      toast.error(err.message || 'Authentication failed');
     } finally {
       setLoading(false);
     }
@@ -35,7 +38,7 @@ const AuthScreen = ({ onLogin }) => {
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--bg-primary)' }}>
-      <div className="card animate-fade-in" style={{ width: '100%', maxWidth: '400px' }}>
+      <div className="card animate-fade-in glass-card" style={{ width: '100%', maxWidth: '400px' }}>
         <h2 style={{ textAlign: 'center', marginBottom: '0.5rem', background: 'linear-gradient(to right, #3b82f6, #8b5cf6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
           NoteSense
         </h2>
@@ -89,24 +92,38 @@ const App = () => {
   const handleLogout = () => {
     localStorage.removeItem('notesense_token');
     setIsAuthenticated(false);
+    toast.success("Logged out successfully");
   };
 
-  if (!isAuthenticated) {
-    return <AuthScreen onLogin={handleLogin} />;
-  }
-
   return (
-    <BrowserRouter>
-      <div className="app-container">
-        <Navbar onLogout={handleLogout} />
-        <Routes>
-          <Route path="/" element={<ProtectedRoute isAuthenticated={isAuthenticated}><Dashboard /></ProtectedRoute>} />
-          <Route path="/upload" element={<ProtectedRoute isAuthenticated={isAuthenticated}><Upload /></ProtectedRoute>} />
-          <Route path="/ask" element={<ProtectedRoute isAuthenticated={isAuthenticated}><DoubtChat /></ProtectedRoute>} />
-          <Route path="/flashcards" element={<ProtectedRoute isAuthenticated={isAuthenticated}><FlashcardReview /></ProtectedRoute>} />
-        </Routes>
-      </div>
-    </BrowserRouter>
+    <>
+      <Toaster 
+        position="top-center" 
+        toastOptions={{
+          style: {
+            background: 'var(--bg-secondary)',
+            color: 'var(--text-primary)',
+            border: '1px solid var(--border-color)',
+            backdropFilter: 'blur(10px)'
+          }
+        }} 
+      />
+      {!isAuthenticated ? (
+        <AuthScreen onLogin={handleLogin} />
+      ) : (
+        <BrowserRouter>
+          <div className="app-container">
+            <Navbar onLogout={handleLogout} />
+            <Routes>
+              <Route path="/" element={<ProtectedRoute isAuthenticated={isAuthenticated}><Dashboard /></ProtectedRoute>} />
+              <Route path="/upload" element={<ProtectedRoute isAuthenticated={isAuthenticated}><Upload /></ProtectedRoute>} />
+              <Route path="/ask" element={<ProtectedRoute isAuthenticated={isAuthenticated}><DoubtChat /></ProtectedRoute>} />
+              <Route path="/flashcards" element={<ProtectedRoute isAuthenticated={isAuthenticated}><FlashcardReview /></ProtectedRoute>} />
+            </Routes>
+          </div>
+        </BrowserRouter>
+      )}
+    </>
   );
 };
 

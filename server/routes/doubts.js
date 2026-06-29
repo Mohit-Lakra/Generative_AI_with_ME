@@ -3,14 +3,24 @@ const Doubt = require('../models/Doubt');
 const auth = require('../middleware/auth');
 const aiClient = require('../services/aiClient');
 
+const Topic = require('../models/Topic');
+
 const router = express.Router();
 
 router.post('/', auth, async (req, res) => {
   try {
-    const { question } = req.body;
+    const { question, topic } = req.body;
+    let noteIds = [];
+    
+    if (topic) {
+      const topicDoc = await Topic.findOne({ userId: req.user.userId, label: topic });
+      if (topicDoc) {
+        noteIds = topicDoc.noteIds.map(id => id.toString());
+      }
+    }
     
     // Call FastAPI service
-    const askRes = await aiClient.ask(req.user.userId.toString(), question);
+    const askRes = await aiClient.ask(req.user.userId.toString(), question, noteIds);
     
     const doubt = new Doubt({
       userId: req.user.userId,

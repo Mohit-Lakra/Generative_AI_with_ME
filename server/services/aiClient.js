@@ -1,14 +1,14 @@
 const aiClient = {
-  ocr: async (imageBase64) => {
-    const response = await fetch(`${process.env.AI_SERVICE_URL}/internal/ocr`, {
+  parse: async (fileBase64, mimetype) => {
+    const response = await fetch(`${process.env.AI_SERVICE_URL}/internal/parse`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'X-Internal-Key': process.env.INTERNAL_API_KEY
       },
-      body: JSON.stringify({ image_base64: imageBase64 })
+      body: JSON.stringify({ file_base64: fileBase64, mimetype })
     });
-    if (!response.ok) throw new Error('AI Service OCR failed');
+    if (!response.ok) throw new Error('AI Service Parse failed');
     return await response.json();
   },
   embed: async (noteId, userId, text) => {
@@ -23,14 +23,14 @@ const aiClient = {
     if (!response.ok) throw new Error('AI Service Embed failed');
     return await response.json();
   },
-  ask: async (userId, question) => {
+  ask: async (userId, question, noteIds = []) => {
     const response = await fetch(`${process.env.AI_SERVICE_URL}/internal/ask`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'X-Internal-Key': process.env.INTERNAL_API_KEY
       },
-      body: JSON.stringify({ user_id: userId, question })
+      body: JSON.stringify({ user_id: userId, question, note_ids: noteIds })
     });
     if (!response.ok) throw new Error('AI Service Ask failed');
     return await response.json();
