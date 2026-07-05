@@ -8,8 +8,6 @@ class FaissIndexWrapper:
         self.index_path = index_path
         self.meta_path = meta_path
         self.dimension = 384 # all-MiniLM-L6-v2 dimension
-        
-        # Mapping vector_id -> user_id (as dict of str to str)
         self.meta = {}
         
         if os.path.exists(self.index_path):
